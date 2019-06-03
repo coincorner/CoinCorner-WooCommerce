@@ -2,7 +2,7 @@
 /*
 Plugin Name: CoinCorner Checkout
 Description: Checkout using Bitcoin
-Version: 1.0
+Version: 1.1
 Author: CoinCorner Ltd
 Author URI: http://www.coincorner.com
 Requires at least: 3.2
@@ -35,7 +35,6 @@ function CoinCornerCheckout()
             $this->has_fields         = false;
             // Load the settings.
             $this->init_settings();
-            date_default_timezone_set('Europe/London');
 
             // Get setting values
             $this->public_key  = $this->get_option('api_public_key');
@@ -87,23 +86,27 @@ function CoinCornerCheckout()
                 $nonce = date_timestamp_get($date);
                 
                 $sig = $this->Generate_Sig();
-                $data = array(
+                $body = array(
                     'APIKey' => $api_public,
                     'Signature' => $sig,
                     'Nonce' => $nonce,
                     'OrderId' => $Order_Id
                 );
-                
-                $options = array(
-                    'http' => array(
-                        'header' => "Content-type: application/x-www-form-urlencoded\r\n",
-                        'method' => 'POST',
-                        'content' => http_build_query($data)
-                    )
+
+                $args = array(
+                    'body' => $body,
+                    'timeout' => '60',
+                    'redirection' => '5',
+                    'httpversion' => '1.1',
+                    'blocking' => true,
                 );
-                
-                $context  = stream_context_create($options);
-                $response = json_decode(file_get_contents($callurl, false, $context), true);
+                $request = wp_remote_post( $callurl, $args );
+    
+                if ( is_wp_error( $request ) || wp_remote_retrieve_response_code( $request ) != 200 ) {
+                    return false;
+                }
+    
+                $response = json_decode(wp_remote_retrieve_body( $request ), true);
 
                 switch ($response["OrderStatusText"]) {
                     case 'Complete':
@@ -202,7 +205,7 @@ function CoinCornerCheckout()
             $ReturnUrl   = $this->get_return_url($order);
             $FailURL   = $order->get_cancel_order_url_raw();
             $callurl = 'https://checkout.coincorner.com/api/CreateOrder';
-            $data    = array(
+            $body  = array(
                 'APIKey' => strtolower($this->public_key),
                 'Signature' => $sig,
                 'Currency' => 'GBP',
@@ -216,19 +219,21 @@ function CoinCornerCheckout()
                 'OrderId' => $orderID
             );
             
-            $options = array(
-                'http' => array(
-                    'header' => "Content-type: application/x-www-form-urlencoded\r\n",
-                    'method' => 'POST',
-                    'content' => http_build_query($data)
-                )
+            $args = array(
+                'body' => $body,
+                'timeout' => '60',
+                'redirection' => '5',
+                'httpversion' => '1.1',
+                'blocking' => true,
             );
-            
-            $context  = stream_context_create($options);
-            $response = json_decode(file_get_contents($callurl, false, $context), true);
-            
+            $request = wp_remote_post( $callurl, $args );
+
+            if ( is_wp_error( $request ) || wp_remote_retrieve_response_code( $request ) != 200 ) {
+                return false;
+            }
+
+            $response = json_decode(wp_remote_retrieve_body( $request ));
             $invoice = explode("/Checkout/", $response);
-            
             if (count($invoice) < 2) {
                 $message = "CoinCorner returned an error. Error: {$response}";
                 wc_add_notice(" There was an error, please try again. If this happens again, please contact us.", 'error');

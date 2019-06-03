@@ -1,11 +1,13 @@
-=== Plugin Name ===
+=== WooCommerce Plugin ===
 Contributors: CoinCorner
 Donate link: https://www.coincorner.com
 Tags: Bitcoin, Payment, Payment Gateway, Accept Bitcoin.
 Requires at least: 3.0.1
+Requires PHP: 5.2
 Tested up to: 5.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
+Stable tag: 1.1
 
 This is the official CoinCorner.com WooCommerce Payment module for integration with Bitcoin
 
@@ -16,7 +18,7 @@ The CoinCorner WooCommerce Payment module allows any site to accept payment in B
 Features:
 
 * Accept BTC payments
-* Get the exact fiat amount back for your payments based on the currect price at CoinCorner.com
+* Get the exact fiat amount back for your payments based on the current price at CoinCorner.com
 * Low 1% fees for accepting payments.
 * Easy to use, easy to integrate, easy for your customers.
 
