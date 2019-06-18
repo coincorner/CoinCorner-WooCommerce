@@ -2,7 +2,7 @@
 /*
 Plugin Name: CoinCorner Checkout
 Description: Checkout using Bitcoin
-Version: 1.1
+Version: 1.2
 Author: CoinCorner Ltd
 Author URI: http://www.coincorner.com
 Requires at least: 3.2
@@ -40,7 +40,9 @@ function CoinCornerCheckout()
             $this->public_key  = $this->get_option('api_public_key');
             $this->private_key = $this->get_option('api_secret_key');
             $this->account_id  = $this->get_option('CoinCornerAccountId');
-            
+            $this->CoinCornerInvoiceCurrency  = $this->get_option('CoinCornerInvoiceCurrency');
+            $this->CoinCornerSettleCurrency  = $this->get_option('CoinCornerSettleCurrency');
+
             // Hooks
             add_action('woocommerce_update_options_payment_gateways_' . $this->id, array(
                 $this,
@@ -50,8 +52,36 @@ function CoinCornerCheckout()
                 $this,
                 'payment_callback'
             ));
-            
+
         }
+
+        public function process_admin_options() {
+            parent::process_admin_options();
+            // Validate currencies.
+            $this->validate_currencies();
+            $this->display_errors();
+        }
+
+     /**
+	   * Validate the provided credentials.
+	   */
+	protected function validate_currencies() {
+        global $woocommerce;
+
+		$invoice_currency = trim($this->CoinCornerInvoiceCurrency);
+		$settlement_currency = trim($this->CoinCornerSettleCurrency);
+
+		if (!ctype_alpha($invoice_currency) ) {
+            WC_Admin_Settings::add_error('Error: Invoice Currency must be set to a valid Currency such as GBP');
+				return false;
+        }
+        
+		if (!ctype_alpha($settlement_currency) ) {
+            WC_Admin_Settings::add_error('Error: Settlement Currency must be set to a valid Currency such as GBP');
+            return false;
+    }
+
+	}
 
         public function Generate_Sig() {
             $api_secret = strtolower($this->private_key);
@@ -173,12 +203,28 @@ function CoinCornerCheckout()
                     'placeholder' => 'API secret key'
                 ),
                 'CoinCornerAccountId' => array(
-                    'title' => __('Account Id', 'CoinCornerCheckout'),
+                    'title' => __('User Id', 'CoinCornerCheckout'),
                     'type' => 'text',
                     'description' => __('Your <a href="https://www.coincorner.com" target="_blank">CoinCorner.com</a> Account Id. You can copy this from the API settings page under <a href="http://www.coincorner.com" target="_blank">Merchant Services &gt; API</a>.<br />'),
                     'default' => '',
                     'desc_tip' => false,
-                    'placeholder' => 'CoinCorner Account Id'
+                    'placeholder' => 'CoinCorner User Id'
+                ),
+                'CoinCornerSettleCurrency' => array(
+                    'title' => __('Settle Currency', 'CoinCornerCheckout'),
+                    'type' => 'text',
+                    'description' => __('The currency you want your orders to be settled in on your CoinCorner Account. Example: GBP <br />'),
+                    'default' => 'GBP',
+                    'desc_tip' => false,
+                    'placeholder' => 'GBP'
+                ), 
+                'CoinCornerInvoiceCurrency' => array(
+                    'title' => __('Invoice Currency', 'CoinCornerCheckout'),
+                    'type' => 'text',
+                    'description' => __('The currency you want your invoices to be displayed in. Example: GBP <br />'),
+                    'default' => 'GBP',
+                    'desc_tip' => false,
+                    'placeholder' => 'GBP'
                 )
             );
         }
@@ -208,9 +254,10 @@ function CoinCornerCheckout()
             $body  = array(
                 'APIKey' => strtolower($this->public_key),
                 'Signature' => $sig,
-                'Currency' => 'GBP',
+                'InvoiceCurrency' => $this->CoinCornerInvoiceCurrency,
+                'SettleCurrency' => $this->CoinCornerSettleCurrency,
                 'Nonce' => $nonce,
-                'Amount' => $amount,
+                'InvoiceAmount' => $amount,
                 'NotificationURL' => $this->notify_url,
                 'ItemDescription' => implode($description, ', '),
                 'ItemCode' => '',
