@@ -133,6 +133,7 @@ function CoinCornerCheckout()
                 $request = wp_remote_post( $callurl, $args );
     
                 if ( is_wp_error( $request ) || wp_remote_retrieve_response_code( $request ) != 200 ) {
+                    http_response_code('400');
                     return false;
                 }
     
@@ -276,6 +277,13 @@ function CoinCornerCheckout()
             $request = wp_remote_post( $callurl, $args );
 
             if ( is_wp_error( $request ) || wp_remote_retrieve_response_code( $request ) != 200 ) {
+
+                $order = new WC_Order($orderID);
+                $order->add_order_note("Payment could not be started, CoinCorner returned an error.");
+                $order->update_status('cancelled');
+
+                wc_add_notice(" There was an error, please try again. If this happens again, please contact us.", 'error');
+
                 return false;
             }
 
